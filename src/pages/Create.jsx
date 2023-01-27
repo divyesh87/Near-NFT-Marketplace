@@ -64,7 +64,7 @@ const Create = (props) => {
     const helpers = await initContract();
     console.log(id);
     try {
-      const res = await helpers.nft_contract.nft_mint(
+      await helpers.nft_contract.nft_mint(
         {
           token_id: id,
           metadata: {
@@ -78,8 +78,6 @@ const Create = (props) => {
         "300000000000000",
         "100000000000000000000000"
       );
-
-      console.log(res);
     } catch (e) {
       alert(
         "Something went wrong! " +
