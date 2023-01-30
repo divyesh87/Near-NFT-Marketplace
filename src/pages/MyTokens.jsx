@@ -3,14 +3,30 @@ import CommonSection from "../components/ui/Common-section/CommonSection";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { initContract } from "../near/utils.js";
 import React from "react";
 import "../styles/MyTokens.css";
 import { Contract } from "near-api-js";
 
+function getSessionNfts() {
+  const data = JSON.parse(sessionStorage.getItem("nfts"));
+  if (data) {
+    return data;
+  } else {
+    return [];
+  }
+}
+
 function Mytokens() {
   const [nftMetadatas, setnftMetadatas] = useState([]);
+
+  useEffect(() => {
+    let data = getSessionNfts();
+    if (data.length > 0) {
+      setnftMetadatas(data);
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -42,6 +58,10 @@ function Mytokens() {
         from_index: "0",
         limit: 20,
       });
+
+      console.log(nfts);
+      if([...nfts] == (sessionStorage.getItem("nfts"))) return
+      sessionStorage.setItem("nfts", JSON.stringify([...nftMetadatas, ...nfts]));
       setnftMetadatas([...nftMetadatas, ...nfts]);
     } catch {
       alert("Invalid address!");
@@ -84,11 +104,12 @@ function Mytokens() {
         <h2 style={{ textAlign: "center" }}>
           Found "{nftMetadatas.length}" NFTs in your wallet:
         </h2>
-        <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start" , flexWrap : "wrap"}}>
           {nftMetadatas.length > 0 ? (
             nftMetadatas.map((nft, key) => {
               return (
                 <div
+                  key={key}
                   style={{
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
                     width: "15vw",
