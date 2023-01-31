@@ -18,19 +18,39 @@ function getSessionNfts() {
   }
 }
 
+function storeContract(address) {
+  let contracts = JSON.parse(localStorage.getItem("nftContracts"));
+  if (contracts == null) contracts = [];
+  const isAlreadyPresent = contracts.some((contract) => {
+    return contract == address;
+  });
+
+  if (isAlreadyPresent) return;
+  contracts.push(address);
+  localStorage.setItem("nftContracts", JSON.stringify(contracts));
+}
+
 function Mytokens() {
   const [nftMetadatas, setnftMetadatas] = useState([]);
+  const [nftContracts, setnftContracts] = useState([]);
 
   useEffect(() => {
     let data = getSessionNfts();
     if (data.length > 0) {
       setnftMetadatas(data);
     }
+
+    const contracts = JSON.parse(localStorage.getItem("nftContracts"));
+    setnftContracts(contracts);
   }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
     const address = e.target.address.value;
+    fetchNFTs(address);
+  }
+
+  async function fetchNFTs(address) {
     const helpers = await initContract();
 
     try {
@@ -53,17 +73,21 @@ function Mytokens() {
         }
       );
 
+      storeContract(contract.contractId);
+
       const nfts = await contract.nft_tokens_for_owner({
         account_id: helpers.accountId,
         from_index: "0",
         limit: 20,
       });
 
-      console.log(nfts);
-      if([...nfts] == (sessionStorage.getItem("nfts"))) return
-      sessionStorage.setItem("nfts", JSON.stringify([...nftMetadatas, ...nfts]));
+      sessionStorage.setItem(
+        "nfts",
+        JSON.stringify([...nftMetadatas, ...nfts])
+      );
       setnftMetadatas([...nftMetadatas, ...nfts]);
-    } catch {
+    } catch (e) {
+      console.log(e);
       alert("Invalid address!");
     }
   }
@@ -84,6 +108,15 @@ function Mytokens() {
     <>
       <CommonSection title="Select collection for viewing your tokens" />
       <section>
+        <div style={{}}>
+          {nftContracts.map((contract, key) => {
+            return (
+              <Button style={{margin : "0.75rem", marginBottom : "2rem"}}  onClick={() => {fetchNFTs(contract)}} key={key}>
+                {contract}
+              </Button>
+            );
+          })}
+        </div>
         <div>
           <h3 style={{ color: "white" }}>Add Collection</h3>
           <form onSubmit={handleSubmit}>
@@ -104,7 +137,13 @@ function Mytokens() {
         <h2 style={{ textAlign: "center" }}>
           Found "{nftMetadatas.length}" NFTs in your wallet:
         </h2>
-        <div style={{ display: "flex", justifyContent: "flex-start" , flexWrap : "wrap"}}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            flexWrap: "wrap",
+          }}
+        >
           {nftMetadatas.length > 0 ? (
             nftMetadatas.map((nft, key) => {
               return (

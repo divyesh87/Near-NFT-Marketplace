@@ -14,6 +14,7 @@ function App(props) {
 
   const signOut = () => {
     wallet.signOut();
+    sessionStorage.clear()
     window.location.replace(window.location.origin + window.location.pathname);
   };
 
