@@ -30,6 +30,17 @@ function storeContract(address) {
   localStorage.setItem("nftContracts", JSON.stringify(contracts));
 }
 
+function checkIPFSHash(hash) {
+  return hash.startsWith("Qm");
+}
+function getImg(url) {
+  if (checkIPFSHash(url)) {
+    return `https://gateway.pinata.cloud/ipfs/${url}`;
+  } else {
+    return url;
+  }
+}
+
 function Mytokens() {
   const [nftMetadatas, setnftMetadatas] = useState([]);
   const [nftContracts, setnftContracts] = useState([]);
@@ -41,7 +52,7 @@ function Mytokens() {
     }
 
     const contracts = JSON.parse(localStorage.getItem("nftContracts"));
-    setnftContracts(contracts);
+    setnftContracts(contracts || []);
   }, []);
 
   async function handleSubmit(e) {
@@ -92,18 +103,6 @@ function Mytokens() {
     }
   }
 
-  function checkIPFSHash(hash) {
-    return hash.startsWith("Qm");
-  }
-
-  function getImg(url) {
-    if (checkIPFSHash(url)) {
-      return `https://gateway.pinata.cloud/ipfs/${url}`;
-    } else {
-      return url;
-    }
-  }
-
   return (
     <>
       <CommonSection title="Select collection for viewing your tokens" />
@@ -111,7 +110,13 @@ function Mytokens() {
         <div style={{}}>
           {nftContracts.map((contract, key) => {
             return (
-              <Button style={{margin : "0.75rem", marginBottom : "2rem"}}  onClick={() => {fetchNFTs(contract)}} key={key}>
+              <Button
+                style={{ margin: "0.75rem", marginBottom: "2rem" }}
+                onClick={() => {
+                  fetchNFTs(contract);
+                }}
+                key={key}
+              >
                 {contract}
               </Button>
             );
