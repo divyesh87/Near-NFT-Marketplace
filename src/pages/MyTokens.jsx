@@ -3,47 +3,26 @@ import CommonSection from "../components/ui/Common-section/CommonSection";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { initContract } from "../near/utils.js";
-import React from "react";
 import "../styles/MyTokens.css";
-import { Contract } from "near-api-js";
+import Modal from "react-bootstrap/Modal";
+import {
+  storeContract,
+  getImg,
+  getSessionNfts,
+  assignContract,
+} from "../helper_functions/MyTokensUtils";
 
-function getSessionNfts() {
-  const data = JSON.parse(sessionStorage.getItem("nfts"));
-  if (data) {
-    return data;
-  } else {
-    return [];
-  }
-}
-
-function storeContract(address) {
-  let contracts = JSON.parse(localStorage.getItem("nftContracts"));
-  if (contracts == null) contracts = [];
-  const isAlreadyPresent = contracts.some((contract) => {
-    return contract == address;
-  });
-
-  if (isAlreadyPresent) return;
-  contracts.push(address);
-  localStorage.setItem("nftContracts", JSON.stringify(contracts));
-}
-
-function checkIPFSHash(hash) {
-  return hash.startsWith("Qm");
-}
-function getImg(url) {
-  if (checkIPFSHash(url)) {
-    return `https://gateway.pinata.cloud/ipfs/${url}`;
-  } else {
-    return url;
-  }
-}
+const NEAR_IN_YOCTO = 1000000000000000000000000;
+const GAS_FEE = `100000000000000`;
 
 function Mytokens() {
   const [nftMetadatas, setnftMetadatas] = useState([]);
   const [nftContracts, setnftContracts] = useState([]);
+  const [sellModal, setsellModal] = useState(false);
+  const [price, setprice] = useState(0);
+  const [currNFT, setcurrNFT] = useState({});
 
   useEffect(() => {
     let data = getSessionNfts();
@@ -55,42 +34,56 @@ function Mytokens() {
     setnftContracts(contracts || []);
   }, []);
 
+  function handleModal(show) {
+    show ? setsellModal(true) : setsellModal(false);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const address = e.target.address.value;
     fetchNFTs(address);
   }
 
+  async function sellNFT(nftId, contractId, price) {
+    const helpers = await initContract();
+    try {
+      const contract = helpers.nft_contract;
+      contract.contractId = contractId;
+      await contract.nft_approve(
+        {
+          token_id: nftId,
+          account_id: helpers.marketplace_contract.contractId,
+          msg: JSON.stringify({
+            price: (NEAR_IN_YOCTO * price).toLocaleString("fullwide", {
+              useGrouping: false,
+            }),
+            is_auction: false,
+            start_time: null,
+            end_time: null,
+          }),
+        },
+        GAS_FEE,
+        (NEAR_IN_YOCTO / 10).toLocaleString("fullwide", { useGrouping: false })
+      );
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async function fetchNFTs(address) {
     const helpers = await initContract();
 
     try {
-      const contract = new Contract(
-        helpers.walletConnection.account(),
-        address,
-        {
-          viewMethods: [
-            "nft_metadata",
-            "nft_total_supply",
-            "nft_tokens_for_owner",
-            "nft_token",
-          ],
-          changeMethods: [
-            "nft_mint",
-            "nft_transfer",
-            "nft_approve",
-            "nft_revoke",
-          ],
-        }
-      );
-
+      const contract = helpers.nft_contract;
+      contract.contractId = address;
       storeContract(contract.contractId);
-
-      const nfts = await contract.nft_tokens_for_owner({
+      let nfts = await contract.nft_tokens_for_owner({
         account_id: helpers.accountId,
         from_index: "0",
         limit: 20,
       });
+
+      nfts = assignContract(nfts, contract.contractId);
 
       sessionStorage.setItem(
         "nfts",
@@ -107,6 +100,23 @@ function Mytokens() {
     <>
       <CommonSection title="Select collection for viewing your tokens" />
       <section>
+        <Modal show={sellModal} onHide={() => handleModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Sell your NFT</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <input value={price} onChange={(e) => setprice(e.target.value)} />
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              onClick={() => {
+                sellNFT(currNFT.id, currNFT.contract, price);
+              }}
+            >
+              Sell
+            </Button>
+          </Modal.Footer>
+        </Modal>
         <div style={{}}>
           {nftContracts.map((contract, key) => {
             return (
@@ -151,6 +161,7 @@ function Mytokens() {
         >
           {nftMetadatas.length > 0 ? (
             nftMetadatas.map((nft, key) => {
+              console.log(nft);
               return (
                 <div
                   key={key}
@@ -158,6 +169,10 @@ function Mytokens() {
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
                     width: "15vw",
                     margin: "1rem",
+                  }}
+                  onClick={() => {
+                    setsellModal(true);
+                    setcurrNFT({ id: nft.token_id, contract: nft.contractId });
                   }}
                 >
                   <img
