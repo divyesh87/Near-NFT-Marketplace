@@ -70,6 +70,21 @@ function Mytokens() {
     }
   }
 
+  async function removeSale(contractId, tokenId) {
+    const { marketplace_contract } = await initContract();
+
+    const res = await marketplace_contract.remove_sale(
+      {
+        nft_contract_id: contractId,
+        token_id: tokenId,
+      },
+      GAS_FEE,
+      (NEAR_IN_YOCTO / 1e24).toLocaleString("fullwide", { useGrouping: false })
+    );
+
+    console.log(res);
+  }
+
   async function fetchNFTs(address) {
     const helpers = await initContract();
 
@@ -108,6 +123,9 @@ function Mytokens() {
             <input value={price} onChange={(e) => setprice(e.target.value)} />
           </Modal.Body>
           <Modal.Footer>
+            <Button onClick={() => removeSale(currNFT.contract, currNFT.id)}>
+              Remove from sale
+            </Button>
             <Button
               onClick={() => {
                 sellNFT(currNFT.id, currNFT.contract, price);
@@ -169,6 +187,7 @@ function Mytokens() {
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
                     width: "15vw",
                     margin: "1rem",
+                    cursor : "pointer"
                   }}
                   onClick={() => {
                     setsellModal(true);
