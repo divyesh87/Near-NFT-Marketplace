@@ -11,7 +11,7 @@ export function storeContract(address) {
     let contracts = JSON.parse(localStorage.getItem("nftContracts"));
     if (contracts == null) contracts = [];
     const isAlreadyPresent = contracts.some((contract) => {
-        return contract == address;
+        return contract === address;
     });
 
     if (isAlreadyPresent) return;

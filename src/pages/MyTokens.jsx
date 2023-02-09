@@ -23,6 +23,8 @@ function Mytokens() {
   const [sellModal, setsellModal] = useState(false);
   const [price, setprice] = useState(0);
   const [currNFT, setcurrNFT] = useState({});
+  const [startTime, setstartTime] = useState();
+  const [endTime, setendTime] = useState();
 
   useEffect(() => {
     let data = getSessionNfts();
@@ -85,6 +87,32 @@ function Mytokens() {
     console.log(res);
   }
 
+  async function auctionNFT(start, end, contractId, id) {
+    const helpers = await initContract();
+    try {
+      const contract = helpers.nft_contract;
+      contract.contractId = contractId;
+      await contract.nft_approve(
+        {
+          token_id: id,
+          account_id: helpers.marketplace_contract.contractId,
+          msg: JSON.stringify({
+            price: (NEAR_IN_YOCTO * price).toLocaleString("fullwide", {
+              useGrouping: false,
+            }),
+            is_auction: true,
+            start_time: (new Date(start).getTime() * 10 ** 6).toString(),
+            end_time: (new Date(end).getTime() * 10 ** 6).toString(),
+          }),
+        },
+        GAS_FEE,
+        (NEAR_IN_YOCTO / 10).toLocaleString("fullwide", { useGrouping: false })
+      );
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async function fetchNFTs(address) {
     const helpers = await initContract();
 
@@ -121,10 +149,29 @@ function Mytokens() {
           </Modal.Header>
           <Modal.Body>
             <input value={price} onChange={(e) => setprice(e.target.value)} />
+            <input
+              id="token_auction_start_time"
+              type="datetime-local"
+              onChange={(e) => setstartTime(e.target.value)}
+              required
+            ></input>
+            <input
+              id="token_auction_start_time"
+              type="datetime-local"
+              onChange={(e) => setendTime(e.target.value)}
+              required
+            ></input>
           </Modal.Body>
           <Modal.Footer>
             <Button onClick={() => removeSale(currNFT.contract, currNFT.id)}>
-              Remove from sale
+              Remove Sale
+            </Button>
+            <Button
+              onClick={() =>
+                auctionNFT(startTime, endTime, currNFT.contract, currNFT.id)
+              }
+            >
+              Auction
             </Button>
             <Button
               onClick={() => {
@@ -179,7 +226,6 @@ function Mytokens() {
         >
           {nftMetadatas.length > 0 ? (
             nftMetadatas.map((nft, key) => {
-              console.log(nft);
               return (
                 <div
                   key={key}
@@ -187,11 +233,12 @@ function Mytokens() {
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
                     width: "15vw",
                     margin: "1rem",
-                    cursor : "pointer"
+                    cursor: "pointer",
                   }}
                   onClick={() => {
                     setsellModal(true);
                     setcurrNFT({ id: nft.token_id, contract: nft.contractId });
+                    // auctionNFT(currNFT.id, currNFT.contract, 1);
                   }}
                 >
                   <img
