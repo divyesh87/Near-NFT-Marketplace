@@ -19,6 +19,20 @@ export function storeContract(address) {
     localStorage.setItem("nftContracts", JSON.stringify(contracts));
 }
 
+export function filterNFTs(nfts) {
+    let filterdNFTs = [];
+    let pushed = [];
+
+    nfts.forEach((nft) => {
+        if (!pushed.includes(nft.token_id)) {
+            filterdNFTs.push(nft);
+        }
+        pushed.push(nft.token_id);
+    });
+
+    return filterdNFTs;
+}
+
 export function checkIPFSHash(hash) {
     return hash.startsWith("Qm");
 }

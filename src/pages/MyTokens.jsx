@@ -1,6 +1,8 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import CommonSection from "../components/ui/Common-section/CommonSection";
 import Button from "react-bootstrap/Button";
+import Tab from "react-bootstrap/Tab";
+import Tabs from "react-bootstrap/Tabs";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import React, { useEffect, useState } from "react";
@@ -12,6 +14,7 @@ import {
   getImg,
   getSessionNfts,
   assignContract,
+  filterNFTs,
 } from "../helper_functions/MyTokensUtils";
 
 const NEAR_IN_YOCTO = 1000000000000000000000000;
@@ -21,10 +24,11 @@ function Mytokens() {
   const [nftMetadatas, setnftMetadatas] = useState([]);
   const [nftContracts, setnftContracts] = useState([]);
   const [sellModal, setsellModal] = useState(false);
-  const [price, setprice] = useState(0);
+  const [price, setprice] = useState("");
   const [currNFT, setcurrNFT] = useState({});
   const [startTime, setstartTime] = useState();
   const [endTime, setendTime] = useState();
+  const [activeTab, setactiveTab] = useState("sellTab");
 
   useEffect(() => {
     let data = getSessionNfts();
@@ -119,20 +123,18 @@ function Mytokens() {
     try {
       const contract = helpers.nft_contract;
       contract.contractId = address;
-      storeContract(contract.contractId);
       let nfts = await contract.nft_tokens_for_owner({
         account_id: helpers.accountId,
         from_index: "0",
         limit: 20,
       });
+      storeContract(contract.contractId);
 
       nfts = assignContract(nfts, contract.contractId);
+      const filterdNFTs = filterNFTs([...nftMetadatas, ...nfts]);
 
-      sessionStorage.setItem(
-        "nfts",
-        JSON.stringify([...nftMetadatas, ...nfts])
-      );
-      setnftMetadatas([...nftMetadatas, ...nfts]);
+      sessionStorage.setItem("nfts", JSON.stringify([...filterdNFTs]));
+      setnftMetadatas([...filterdNFTs]);
     } catch (e) {
       console.log(e);
       alert("Invalid address!");
@@ -148,37 +150,68 @@ function Mytokens() {
             <Modal.Title>Sell your NFT</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            <input value={price} onChange={(e) => setprice(e.target.value)} />
-            <input
-              id="token_auction_start_time"
-              type="datetime-local"
-              onChange={(e) => setstartTime(e.target.value)}
-              required
-            ></input>
-            <input
-              id="token_auction_start_time"
-              type="datetime-local"
-              onChange={(e) => setendTime(e.target.value)}
-              required
-            ></input>
+            <Tabs activeKey={activeTab} onSelect={(k) => setactiveTab(k)}>
+              <Tab
+                style={{ margin: "1rem" }}
+                eventKey="sellTab"
+                title="Sell NFT"
+              >
+                <Form>
+                  <Form.Control
+                    value={price}
+                    onChange={(e) => setprice(e.target.value)}
+                    placeholder="Price"
+                  />
+                </Form>
+              </Tab>
+
+              <Tab eventKey="auctionTab" title="Auction NFT">
+                <Form>
+                  <Form.Control
+                    style={{ marginBottom: "1rem" }}
+                    value={price}
+                    onChange={(e) => setprice(e.target.value)}
+                    placeholder="Start Price"
+                  />
+                  <label htmlFor="start">Start time</label>
+                  <Form.Control
+                    id="start"
+                    style={{ marginBottom: "1rem" }}
+                    type="datetime-local"
+                    onChange={(e) => setstartTime(e.target.value)}
+                    placeholder="Set start time"
+                  />
+                  <label htmlFor="end">End time</label>
+                  <Form.Control
+                    id="end"
+                    style={{ marginBottom: "1rem" }}
+                    type="datetime-local"
+                    onChange={(e) => setendTime(e.target.value)}
+                    placeholder="Set end time"
+                  />
+                </Form>
+              </Tab>
+            </Tabs>
           </Modal.Body>
-          <Modal.Footer>
+          <Modal.Footer
+            style={{ display: "flex", justifyContent: "space-between" }}
+          >
             <Button onClick={() => removeSale(currNFT.contract, currNFT.id)}>
-              Remove Sale
-            </Button>
-            <Button
-              onClick={() =>
-                auctionNFT(startTime, endTime, currNFT.contract, currNFT.id)
-              }
-            >
-              Auction
+              Remove this Sale
             </Button>
             <Button
               onClick={() => {
-                sellNFT(currNFT.id, currNFT.contract, price);
+                activeTab == "sellTab"
+                  ? sellNFT(currNFT.id, currNFT.contract, price)
+                  : auctionNFT(
+                      startTime,
+                      endTime,
+                      currNFT.contract,
+                      currNFT.id
+                    );
               }}
             >
-              Sell
+              {activeTab == "sellTab" ? "Sell" : "Auction"}
             </Button>
           </Modal.Footer>
         </Modal>
@@ -208,7 +241,7 @@ function Mytokens() {
                 name="address"
                 required
               />
-              <Button variant="success" type="submit" id="button-addon2">
+              <Button type="submit" id="button-addon2">
                 SUBMIT
               </Button>
             </InputGroup>
@@ -231,7 +264,8 @@ function Mytokens() {
                   key={key}
                   style={{
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
-                    width: "15vw",
+                    maxWidth: "15vw",
+                    minHeight : "15vh",
                     margin: "1rem",
                     cursor: "pointer",
                   }}
