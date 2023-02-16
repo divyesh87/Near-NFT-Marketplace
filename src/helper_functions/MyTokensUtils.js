@@ -1,3 +1,5 @@
+import { initContract } from "../near/utils";
+
 export function getSessionNfts() {
     const data = JSON.parse(sessionStorage.getItem("nfts"));
     if (data) {
@@ -50,4 +52,11 @@ export function assignContract(nfts, address) {
         nft.contractId = address;
     });
     return nfts;
+}
+
+
+export async function getSales() {
+    const helpers = await initContract();
+    const res = await helpers.marketplace_contract.get_sales();
+    return res;
 }

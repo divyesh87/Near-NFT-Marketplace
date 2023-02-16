@@ -15,6 +15,7 @@ import {
   getSessionNfts,
   assignContract,
   filterNFTs,
+  getSales,
 } from "../helper_functions/MyTokensUtils";
 
 const NEAR_IN_YOCTO = 1000000000000000000000000;
@@ -29,6 +30,7 @@ function Mytokens() {
   const [startTime, setstartTime] = useState();
   const [endTime, setendTime] = useState();
   const [activeTab, setactiveTab] = useState("sellTab");
+  const [sellBtn, setsellBtn] = useState(false);
 
   useEffect(() => {
     let data = getSessionNfts();
@@ -39,6 +41,30 @@ function Mytokens() {
     const contracts = JSON.parse(localStorage.getItem("nftContracts"));
     setnftContracts(contracts || []);
   }, []);
+
+  useEffect(() => {
+    async function fetchContractNFTs() {
+      const helpers = await initContract();
+      fetchNFTs(helpers.nft_contract.contractId);
+    }
+
+    fetchContractNFTs();
+  }, []);
+
+  useEffect(() => {
+    async function isOnSale() {
+      const sales = await getSales();
+      const isPresent = sales.some((sale) => sale.token_id == currNFT.id);
+      if (isPresent) {
+        setsellBtn(false);
+        console.log("present");
+      } else {
+        setsellBtn(true);
+        console.log("not p");
+      }
+    }
+    isOnSale()
+  }, [currNFT]);
 
   function handleModal(show) {
     show ? setsellModal(true) : setsellModal(false);
@@ -196,7 +222,10 @@ function Mytokens() {
           <Modal.Footer
             style={{ display: "flex", justifyContent: "space-between" }}
           >
-            <Button onClick={() => removeSale(currNFT.contract, currNFT.id)}>
+            <Button
+              disabled={sellBtn}
+              onClick={() => removeSale(currNFT.contract, currNFT.id)}
+            >
               Remove this Sale
             </Button>
             <Button
@@ -265,14 +294,16 @@ function Mytokens() {
                   style={{
                     backgroundColor: "rgba(0, 0, 255, 0.219)",
                     maxWidth: "15vw",
-                    minHeight : "15vh",
+                    minHeight: "15vh",
                     margin: "1rem",
                     cursor: "pointer",
                   }}
-                  onClick={() => {
+                  onClick={async () => {
                     setsellModal(true);
-                    setcurrNFT({ id: nft.token_id, contract: nft.contractId });
-                    // auctionNFT(currNFT.id, currNFT.contract, 1);
+                    setcurrNFT({
+                      id: nft.token_id,
+                      contract: nft.contractId,
+                    });
                   }}
                 >
                   <img
