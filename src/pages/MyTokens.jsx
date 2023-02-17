@@ -63,7 +63,7 @@ function Mytokens() {
         console.log("not p");
       }
     }
-    isOnSale()
+    isOnSale();
   }, [currNFT]);
 
   function handleModal(show) {
@@ -240,7 +240,11 @@ function Mytokens() {
                     );
               }}
             >
-              {activeTab == "sellTab" ? "Sell" : "Auction"}
+              {activeTab == "sellTab"
+                ? sellBtn
+                  ? "Sell"
+                  : "Edit sale"
+                : "Auction"}
             </Button>
           </Modal.Footer>
         </Modal>
